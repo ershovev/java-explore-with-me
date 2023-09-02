@@ -3,6 +3,12 @@ version: '3.8'
 services:
   ewm-db:
     image: postgres:14-alpine
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
     container_name: ewm-db
     volumes:
       - /var/lib/postgresql/data
@@ -15,6 +21,12 @@ services:
 
   ewm-service:
     build: ./main-service
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
     image: ewm-service-image
     container_name: ewm-service
     ports:
@@ -28,6 +40,12 @@ services:
 
   stats-server:
     build: ./stats-service/client
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
     image: stats-client-image
     container_name: stats-client
     ports:
@@ -39,6 +57,12 @@ services:
 
   stats-service:
     build: ./stats-service/service
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
     image: stats-service-image
     container_name: stats-service
     ports:
@@ -52,6 +76,12 @@ services:
 
   stats-db:
     image: postgres:14-alpine
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
     container_name: stats-db
     volumes:
       - /var/lib/postgresql/data
