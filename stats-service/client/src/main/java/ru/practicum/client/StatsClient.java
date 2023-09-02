@@ -29,12 +29,16 @@ public class StatsClient extends BaseClient {
             Map<String, Object> parameters = new HashMap<>();
             parameters.put("start", start);
             parameters.put("end", end);
-            for (String s : uris) {
-                parameters.put("uris", s);
-            }
             parameters.put("unique", unique);
 
-            return get("/stats/?start={start}&end={end}&uris={uris}&unique={unique}", parameters);
+            StringBuilder urisParam = new StringBuilder();
+            for (int i = 0; i < uris.size(); i++) {
+                urisParam.append("&uris=").append(uris.get(i));
+            }
+
+            String url = "/stats/?start={start}&end={end}" + urisParam.toString() + "&unique={unique}";
+
+            return get(url, parameters);
         } else {
             Map<String, Object> parameters = Map.of("start", start,
                     "end", end,
