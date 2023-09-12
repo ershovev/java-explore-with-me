@@ -13,30 +13,30 @@ services:
     volumes:
       - /var/lib/postgresql/data
     ports:
-      - "6542:5433"
+      - "6542:5432"
     environment:
       - POSTGRES_DB=ewm-db
       - POSTGRES_USER=sa
       - POSTGRES_PASSWORD=password
 
   ewm-service:
-    build: ./main-service
-    deploy:
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 5
-        window: 60s
-    image: ewm-service-image
-    container_name: ewm-service
-    ports:
-      - "8080:8080"
-    depends_on:
-      - ewm-db
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5433/ewm-db
-      - SPRING_DATASOURCE_USERNAME=sa
-      - SPRING_DATASOURCE_PASSWORD=password
+   build: ./main-service
+   deploy:
+     restart_policy:
+       condition: on-failure
+       delay: 5s
+       max_attempts: 5
+       window: 60s
+   image: ewm-service-image
+   container_name: ewm-service
+   ports:
+     - "8080:8080"
+   depends_on:
+     - ewm-db
+   environment:
+     - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm-db
+     - SPRING_DATASOURCE_USERNAME=sa
+     - SPRING_DATASOURCE_PASSWORD=password
 
   stats-server:
     build: ./stats-service/service
