@@ -1,9 +1,6 @@
 package ru.practicum.event.service;
 
-import ru.practicum.event.dto.EventFullDto;
-import ru.practicum.event.dto.EventShortDto;
-import ru.practicum.event.dto.NewEventDto;
-import ru.practicum.event.dto.UpdateEventUserRequest;
+import ru.practicum.event.dto.*;
 import ru.practicum.participationrequest.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.participationrequest.dto.EventRequestStatusUpdateResult;
 import ru.practicum.participationrequest.dto.ParticipationRequestDto;
@@ -15,7 +12,7 @@ public interface EventPrivateService {
 
     EventFullDto addEvent(long userId, NewEventDto newEventDto);
 
-    EventFullDto getFullEventOfUser(long userId, long eventId);
+    EventFullCommentDto getFullEventOfUser(long userId, long eventId);
 
     EventFullDto updateUserEvent(long userId, long eventId, UpdateEventUserRequest updateEventUserRequest);
 

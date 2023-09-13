@@ -3,6 +3,7 @@ package ru.practicum.event;
 import ru.practicum.category.Category;
 import ru.practicum.category.CategoryMapper;
 import ru.practicum.enums.State;
+import ru.practicum.event.dto.EventFullCommentDto;
 import ru.practicum.event.dto.EventFullDto;
 import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.event.dto.NewEventDto;
@@ -118,5 +119,33 @@ public class EventMapper {
         return eventList.stream()
                 .map(EventMapper::toEventFullDto)
                 .collect(Collectors.toList());
+    }
+
+    public static EventFullCommentDto toEventFullCommentDto(Event event) {
+
+        return EventFullCommentDto.builder()
+                .id(event.getId())
+                .title(event.getTitle())
+                .annotation(event.getAnnotation())
+                .category(CategoryMapper.toCategoryDto(event.getCategory()))
+                .paid(event.getPaid())
+                .views(event.getViews())
+                .eventDate(Optional.ofNullable(event.getEventDate())
+                        .map(dateTime -> dateTime.format(mainDateTimeFormatter))
+                        .orElse(null))
+                .initiator(UserMapper.toUserShortDto(event.getInitiator()))
+                .description(event.getDescription())
+                .participantLimit(event.getParticipantLimit())
+                .state(event.getState().toString())
+                .createdOn(Optional.ofNullable(event.getCreatedOn())
+                        .map(dateTime -> dateTime.format(mainDateTimeFormatter))
+                        .orElse(null))
+                .location(event.getLocation())
+                .requestModeration(event.getRequestModeration())
+                .publishedOn(Optional.ofNullable(event.getPublishedOn())
+                        .map(dateTime -> dateTime.format(mainDateTimeFormatter))
+                        .orElse(null))
+                .confirmedRequests(event.getConfirmedRequests())
+                .build();
     }
 }

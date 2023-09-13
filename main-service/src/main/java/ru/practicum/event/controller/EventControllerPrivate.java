@@ -5,10 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.event.dto.EventFullDto;
-import ru.practicum.event.dto.EventShortDto;
-import ru.practicum.event.dto.NewEventDto;
-import ru.practicum.event.dto.UpdateEventUserRequest;
+import ru.practicum.event.dto.*;
 import ru.practicum.event.service.EventPrivateService;
 import ru.practicum.participationrequest.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.participationrequest.dto.EventRequestStatusUpdateResult;
@@ -48,7 +45,7 @@ public class EventControllerPrivate {
 
     @GetMapping("/{userId}/events/{eventId}")
     @ResponseStatus(HttpStatus.OK)
-    public EventFullDto getFullEventOfUser(@PathVariable long userId, @PathVariable long eventId) {
+    public EventFullCommentDto getFullEventOfUser(@PathVariable long userId, @PathVariable long eventId) {
         log.info("получен запрос на получение полной информации по событию с id = " + eventId
                 + " от пользователя с id = " + userId);
 

@@ -15,6 +15,8 @@ import ru.practicum.event.EventMapper;
 import ru.practicum.event.EventRepository;
 import ru.practicum.event.dto.EventFullDto;
 import ru.practicum.event.dto.UpdateEventAdminRequest;
+import ru.practicum.event.eventAdminComment.EventAdminCommentMapper;
+import ru.practicum.event.eventAdminComment.EventAdminCommentRepository;
 import ru.practicum.exception.*;
 import ru.practicum.location.Location;
 import ru.practicum.location.LocationRepository;
@@ -33,6 +35,7 @@ public class EventAdminServiceImpl implements EventAdminService {
     private final CategoryRepository categoryRepository;
     private final EventRepository eventRepository;
     private final LocationRepository locationRepository;
+    private final EventAdminCommentRepository eventAdminCommentRepository;
 
     @Override
     public List<EventFullDto> getEvents(List<Long> users, List<State> states, List<Long> categories,
@@ -136,6 +139,11 @@ public class EventAdminServiceImpl implements EventAdminService {
 
         if (updateEventAdminRequest.getTitle() != null) {
             event.setTitle(updateEventAdminRequest.getTitle());
+        }
+
+        if (updateEventAdminRequest.getAdminComment() != null) {
+            eventAdminCommentRepository.save(EventAdminCommentMapper
+                    .toEventAdminComment(updateEventAdminRequest.getAdminComment(), event));
         }
 
         Event updatedEvent = eventRepository.save(event);
