@@ -25,8 +25,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
     @Override
     public List<ParticipationRequestDto> getRequestsOfUser(long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+        findUser(userId);
         List<ParticipationRequest> requests = requestRepository.findAllByRequesterId(userId);
 
         return ParticipationRequestMapper.toParticipationRequestDtoList(requests);
@@ -35,11 +34,8 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     @Override
     @Transactional
     public ParticipationRequestDto addParticipationRequest(long userId, long eventId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EventNotFoundException("Событие не найдено"));
+        User user = findUser(userId);
+        Event event = findEvent(eventId);
         RequestStatus requestStatus;
 
         if (requestRepository.findByRequesterIdAndEventId(userId, eventId) != null) {
@@ -79,11 +75,8 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     @Override
     @Transactional
     public ParticipationRequestDto cancelParticipationRequest(long userId, long requestId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-
-        ParticipationRequest request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new ParticipationRequestNotFoundException("Запрос на участие в событии не найден"));
+        findUser(userId);
+        ParticipationRequest request = findParticipationRequest(requestId);
 
         if (request.getStatus().equals(RequestStatus.CONFIRMED)) {
             Event event = request.getEvent();
@@ -94,5 +87,20 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         request.setStatus(RequestStatus.CANCELED);
 
         return ParticipationRequestMapper.toParticipationRequestDto(requestRepository.save(request));
+    }
+
+    private User findUser(long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+    }
+
+    private Event findEvent(long eventId) {
+        return eventRepository.findById(eventId)
+                .orElseThrow(() -> new EventNotFoundException("Событие не найдено"));
+    }
+
+    private ParticipationRequest findParticipationRequest(long requestId) {
+        return requestRepository.findById(requestId)
+                .orElseThrow(() -> new ParticipationRequestNotFoundException("Запрос на участие в событии не найден"));
     }
 }

@@ -21,7 +21,7 @@ public class CategoryPublicServiceImpl implements CategoryPublicService {
 
     @Override
     public List<CategoryDto> getCategories(int from, int size) {
-        Pageable pageable = PageRequest.of((int) (from / size), (int) size);
+        Pageable pageable = PageRequest.of((from / size), size);
         List<Category> categories = categoryRepository.findAll(pageable).getContent();
 
         return CategoryMapper.toCategoryDtoList(categories);
@@ -29,9 +29,13 @@ public class CategoryPublicServiceImpl implements CategoryPublicService {
 
     @Override
     public CategoryDto getCategory(long catId) {
-        Category category = categoryRepository.findById(catId)
-                .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена"));
+        Category category = findCategoryById(catId);
 
         return CategoryMapper.toCategoryDto(category);
+    }
+
+    private Category findCategoryById(long catId) {
+        return categoryRepository.findById(catId)
+                .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена"));
     }
 }

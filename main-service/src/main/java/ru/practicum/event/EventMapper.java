@@ -24,7 +24,7 @@ public class EventMapper {
         }
 
         if (newEventDto.getParticipantLimit() == null) {
-            newEventDto.setParticipantLimit(Long.valueOf(0));
+            newEventDto.setParticipantLimit(0L);
         }
 
         if (newEventDto.getRequestModeration() == null) {
@@ -55,7 +55,7 @@ public class EventMapper {
         }
 
         if (event.getParticipantLimit() == null) {
-            event.setParticipantLimit(Long.valueOf(0));
+            event.setParticipantLimit(0L);
         }
 
         if (event.getRequestModeration() == null) {
@@ -84,10 +84,6 @@ public class EventMapper {
     }
 
     public static EventFullDto toEventFullDto(Event event) {
-        //    if (event.getPublishedOn() != null) {
-        //        publishedOn = event.getPublishedOn().toString();
-        //    }
-
         return EventFullDto.builder()
                 .id(event.getId())
                 .title(event.getTitle())

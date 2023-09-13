@@ -25,7 +25,7 @@ public class UserAdminServiceImpl implements UserAdminService {
         if (usersIds != null) {
             users = userRepository.findAllByIdIn(usersIds);
         } else {
-            Pageable pageable = PageRequest.of((int) (from / size), (int) size);
+            Pageable pageable = PageRequest.of((from / size), size);
             users = userRepository.findAll(pageable).getContent();
         }
         return UserMapper.toUserDtoList(users);
@@ -37,6 +37,7 @@ public class UserAdminServiceImpl implements UserAdminService {
         User user = UserMapper.toUser(newUserRequest);
         User createdUser = userRepository.save(user);
         log.info("Добавлен пользователь: " + createdUser.toString());
+
         return UserMapper.toUserDto(createdUser);
     }
 

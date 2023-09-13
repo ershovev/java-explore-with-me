@@ -8,6 +8,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.enums.EventSort;
 import ru.practicum.event.dto.EventFullDto;
+import ru.practicum.event.dto.EventSearchParams;
 import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.event.service.EventPublicService;
 
@@ -41,8 +42,18 @@ public class EventControllerPublic {
                                          HttpServletRequest request) {
         log.info("получен запрос на получение информации о событиях");
 
-        return eventPublicService.getEvents(text, categories, paid, rangeStart, rangeEnd, onlyAvailable,
-                sort, from, size, request);
+        EventSearchParams params = EventSearchParams.builder()
+                .text(text)
+                .categories(categories)
+                .paid(paid)
+                .rangeStart(rangeStart)
+                .rangeEnd(rangeEnd)
+                .onlyAvailable(onlyAvailable)
+                .sort(sort)
+                .from(from)
+                .size(size).build();
+
+        return eventPublicService.getEvents(params, request);
     }
 
     @GetMapping("/{id}")

@@ -38,9 +38,13 @@ public class CompilationPublicServiceImpl implements CompilationPublicService {
 
     @Override
     public CompilationDto getCompilationById(long compId) {
-        Compilation compilation = compilationRepository.findById(compId)
-                .orElseThrow(() -> new CompilationNotFoundException("подборка событий c  id = " + compId + " не найдена"));
+        Compilation compilation = findCompilationById(compId);
 
         return CompilationMapper.toCompilationDto(compilation);
+    }
+
+    private Compilation findCompilationById(long compId) {
+        return compilationRepository.findById(compId)
+                .orElseThrow(() -> new CompilationNotFoundException("подборка событий не найдена"));
     }
 }

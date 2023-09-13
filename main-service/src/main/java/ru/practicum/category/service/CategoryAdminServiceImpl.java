@@ -2,7 +2,6 @@ package ru.practicum.category.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.category.Category;
@@ -20,7 +19,7 @@ public class CategoryAdminServiceImpl implements CategoryAdminService {
     private final CategoryRepository categoryRepository;
 
     @Override
-    @Transactional(rollbackFor = DataIntegrityViolationException.class)
+    @Transactional
     public CategoryDto addCategory(NewCategoryDto newCategoryDto) {
         Category categoryToSave = CategoryMapper.toCategory(newCategoryDto);
         Category savedCategory = categoryRepository.save(categoryToSave);
@@ -32,18 +31,16 @@ public class CategoryAdminServiceImpl implements CategoryAdminService {
     @Override
     @Transactional
     public void deleteCategory(long catId) {
-        categoryRepository.findById(catId)
-                .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена"));
+        findCategoryById(catId);
 
         categoryRepository.deleteById(catId);
         log.info("Удалена категория с id: " + catId);
     }
 
     @Override
-    @Transactional(rollbackFor = DataIntegrityViolationException.class)
+    @Transactional
     public CategoryDto updateCategory(long catId, CategoryDto categoryDto) {
-        categoryRepository.findById(catId)
-                .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена"));
+        findCategoryById(catId);
 
         Category categoryToUpdate = CategoryMapper.toCategory(categoryDto);
         categoryToUpdate.setId(catId);
@@ -51,7 +48,11 @@ public class CategoryAdminServiceImpl implements CategoryAdminService {
         log.info("Обновлена категория: " + savedCategory.toString());
 
         return CategoryMapper.toCategoryDto(savedCategory);
+    }
 
+    private Category findCategoryById(long catId) {
+        return categoryRepository.findById(catId)
+                .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена"));
     }
 }
 

@@ -31,7 +31,7 @@ import ru.practicum.user.User;
 import ru.practicum.user.UserRepository;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -48,8 +48,7 @@ public class EventPrivateServiceImpl implements EventPrivateService {
 
     @Override
     public List<EventShortDto> getEventsOfUser(long userId, int from, int size) {
-        userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+        findUserById(userId);
 
         Pageable pageable = PageRequest.of((from / size), size);
 
@@ -61,11 +60,9 @@ public class EventPrivateServiceImpl implements EventPrivateService {
     @Override
     @Transactional
     public EventFullDto addEvent(long userId, NewEventDto newEventDto) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+        User user = findUserById(userId);
 
-        Category category = categoryRepository.findById(newEventDto.getCategory())
-                .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена"));
+        Category category = findCategoryById(newEventDto.getCategory());
 
         if (!newEventDto.getEventDate().isAfter(LocalDateTime.now().plusHours(2))) {
             throw new EventDateException("Событие не может иметь начало ранее чем через 2 два часа от текущего времени");
@@ -81,10 +78,8 @@ public class EventPrivateServiceImpl implements EventPrivateService {
 
     @Override
     public EventFullDto getFullEventOfUser(long userId, long eventId) {
-        userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EventNotFoundException("Событие не найдено"));
+        findUserById(userId);
+        Event event = findEventById(eventId);
 
         return EventMapper.toEventFullDto(event);
     }
@@ -92,54 +87,24 @@ public class EventPrivateServiceImpl implements EventPrivateService {
     @Override
     @Transactional
     public EventFullDto updateUserEvent(long userId, long eventId, UpdateEventUserRequest updateEventUserRequest) {
-        userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EventNotFoundException("Событие не найдено"));
-
-        if (event.getState() != State.PENDING && event.getState() != State.CANCELED) {
-            throw new EventUpdateException("Изменить можно только отмененные события или события в состоянии ожидания модерации ");
-        }
-
-        if (updateEventUserRequest.getStateAction() != null) {
-            if (updateEventUserRequest.getStateAction() == StateAction.SEND_TO_REVIEW) {
-                event.setState(State.PENDING);
-            } else if (updateEventUserRequest.getStateAction() == StateAction.CANCEL_REVIEW) {
-                event.setState(State.CANCELED);
-            } else {
-                throw new EventStateException("StateAction может принимать значения: SEND_TO_REVIEW или CANCEL_REVIEW");
-            }
-        }
+        findUserById(userId);
+        Event event = findEventById(eventId);
+        validateStateForEventUpdate(event.getState());
+        updateEventState(event, updateEventUserRequest.getStateAction());
+        setEventDateForUpdate(event, updateEventUserRequest.getEventDate());
+        setLocationForUpdate(event, updateEventUserRequest.getLocation());
 
         if (updateEventUserRequest.getAnnotation() != null) {
             event.setAnnotation(updateEventUserRequest.getAnnotation());
         }
 
         if (updateEventUserRequest.getCategory() != null) {
-            Category category = categoryRepository.findById(updateEventUserRequest.getCategory())
-                    .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена"));
+            Category category = findCategoryById(updateEventUserRequest.getCategory());
             event.setCategory(category);
         }
 
         if (updateEventUserRequest.getDescription() != null) {
             event.setDescription(updateEventUserRequest.getDescription());
-        }
-
-        if (updateEventUserRequest.getEventDate() != null) {
-            if (updateEventUserRequest.getEventDate().isBefore(LocalDateTime.now().plusHours(2))) {
-                throw new EventDateException("Время начала события не может быть ранее чем через 2 часа от текущего");
-            }
-            event.setEventDate(updateEventUserRequest.getEventDate());
-        }
-
-        if (updateEventUserRequest.getLocation() != null) {
-            float lat = updateEventUserRequest.getLocation().getLat();
-            float lon = updateEventUserRequest.getLocation().getLon();
-            Location location = locationRepository.findByLatAndLon(lat, lon);
-            if (location == null) {
-                location = locationRepository.save(Location.builder().lat(lat).lon(lon).build());
-            }
-            event.setLocation(location);
         }
 
         if (updateEventUserRequest.getPaid() != null) {
@@ -166,10 +131,8 @@ public class EventPrivateServiceImpl implements EventPrivateService {
 
     @Override
     public List<ParticipationRequestDto> getEventParticipationRequests(long userId, long eventId) {
-        userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EventNotFoundException("Событие не найдено"));
+        findUserById(userId);
+        Event event = findEventById(eventId);
         if (event.getInitiator().getId() != userId) {
             throw new EventAccessException("Пользователь не инициатор события");
         }
@@ -183,21 +146,100 @@ public class EventPrivateServiceImpl implements EventPrivateService {
     @Transactional
     public EventRequestStatusUpdateResult changeRequestStatus(long userId, long eventId,
                                                               EventRequestStatusUpdateRequest eventRequestStatusUpdateRequest) {
-        userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EventNotFoundException("Событие не найдено"));
+        findUserById(userId);
+        Event event = findEventById(eventId);
 
-        if (event.getParticipantLimit() == 0 || event.getRequestModeration().equals(false)) {
+        validateModerationAndParticipantLimit(event);
+        validateRequestIds(eventRequestStatusUpdateRequest.getRequestIds(), eventId);
+        List<Long> requestIds = eventRequestStatusUpdateRequest.getRequestIds();
+        RequestStatus status = eventRequestStatusUpdateRequest.getStatus();
+
+        List<ParticipationRequest> confirmedRequests;
+        List<ParticipationRequest> rejectedRequests;
+
+        if (status == RequestStatus.CONFIRMED) {
+            confirmedRequests = confirmRequests(requestIds, event);
+            rejectedRequests = rejectRemainingRequests(requestIds);
+        } else if (status == RequestStatus.REJECTED) {
+            confirmedRequests = Collections.emptyList();
+            rejectedRequests = rejectRequests(requestIds);
+        } else {
+            throw new RequestStatusException("Некорректный статус заявки");
+        }
+
+        List<ParticipationRequest> savedConfirmedRequests = participationRequestRepository.saveAll(confirmedRequests);
+        List<ParticipationRequest> savedRejectedRequests = participationRequestRepository.saveAll(rejectedRequests);
+        eventRepository.save(event);
+
+        return ParticipationRequestMapper.toEventRequestStatusUpdateResult(savedConfirmedRequests, savedRejectedRequests);
+    }
+
+    private Event findEventById(long eventId) {
+        return eventRepository.findById(eventId)
+                .orElseThrow(() -> new EventNotFoundException("Событие не найдено"));
+    }
+
+    private Category findCategoryById(long catId) {
+        return categoryRepository.findById(catId)
+                .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена"));
+    }
+
+    private User findUserById(long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+    }
+
+    private void validateStateForEventUpdate(State state) {
+        if (state != State.PENDING && state != State.CANCELED) {
+            throw new EventUpdateException("Изменить можно только отмененные события или события в состоянии ожидания модерации ");
+        }
+    }
+
+    private void updateEventState(Event event, StateAction stateAction) {
+        if (stateAction != null) {
+            if (stateAction == StateAction.SEND_TO_REVIEW) {
+                event.setState(State.PENDING);
+            } else if (stateAction == StateAction.CANCEL_REVIEW) {
+                event.setState(State.CANCELED);
+            } else {
+                throw new EventStateException("StateAction может принимать значения: SEND_TO_REVIEW или CANCEL_REVIEW");
+            }
+        }
+    }
+
+    private void setEventDateForUpdate(Event event, LocalDateTime eventDate) {
+        if (eventDate != null) {
+            if (eventDate.isBefore(LocalDateTime.now().plusHours(2))) {
+                throw new EventDateException("Время начала события не может быть ранее чем через 2 часа от текущего");
+            }
+            event.setEventDate(eventDate);
+        }
+    }
+
+    private void setLocationForUpdate(Event event, Location location) {
+        if (location != null) {
+            float lat = location.getLat();
+            float lon = location.getLon();
+            Location foundLocation = locationRepository.findByLatAndLon(lat, lon);
+            if (foundLocation == null) {
+                location = locationRepository.save(Location.builder().lat(lat).lon(lon).build());
+            }
+            event.setLocation(location);
+        }
+    }
+
+    private void validateModerationAndParticipantLimit(Event event) {
+        if (event.getParticipantLimit() == 0 || !event.getRequestModeration()) {
             throw new EventModerationException("Подтверждение заявок для события не требуется");
         }
-        if (event.getParticipantLimit() == event.getConfirmedRequests() &&
-                eventRequestStatusUpdateRequest.getStatus().equals(RequestStatus.CONFIRMED)) {
+
+        if (event.getParticipantLimit() == event.getConfirmedRequests()) {
             throw new EventFullParticipantLimit("Достигнут лимит участников события");
         }
+    }
 
-        List<ParticipationRequest> requestsList = participationRequestRepository
-                .findAllByIdIn(eventRequestStatusUpdateRequest.getRequestIds());
+    private void validateRequestIds(List<Long> requestIds, long eventId) {
+        List<ParticipationRequest> requestsList = participationRequestRepository.findAllByIdIn(requestIds);
 
         for (ParticipationRequest request : requestsList) {
             if (request.getStatus() != RequestStatus.PENDING) {
@@ -208,52 +250,44 @@ public class EventPrivateServiceImpl implements EventPrivateService {
                         + " не относится к событию с id " + eventId);
             }
         }
+    }
 
-        List<Long> requestIds = eventRequestStatusUpdateRequest.getRequestIds();
-        RequestStatus status = eventRequestStatusUpdateRequest.getStatus();
-        List<ParticipationRequest> confirmedRequests = new ArrayList<>();
-        List<ParticipationRequest> rejectedRequests = new ArrayList<>();
+    private List<ParticipationRequest> confirmRequests(List<Long> requestIds, Event event) {
+        long availableSlots = event.getParticipantLimit() - event.getConfirmedRequests();
+        long numOfConfirmedRequests = Math.min(requestIds.size(), availableSlots);
 
-        if (status == RequestStatus.CONFIRMED) {
-            long availableSlots = event.getParticipantLimit() - event.getConfirmedRequests();
-            long numOfConfirmedRequests = Math.min(requestIds.size(), availableSlots);
+        List<ParticipationRequest> requestsList = participationRequestRepository.findAllByIdIn(requestIds);
 
-            List<ParticipationRequest> requestsToConfirm = requestsList.stream()
-                    .filter(request -> requestIds.contains(request.getId()) && request.getStatus() != RequestStatus.CONFIRMED)
-                    .limit(numOfConfirmedRequests)
-                    .collect(Collectors.toList());
+        List<ParticipationRequest> requestsToConfirm = requestsList.stream()
+                .filter(request -> request.getStatus() != RequestStatus.CONFIRMED)
+                .limit(numOfConfirmedRequests)
+                .peek(request -> request.setStatus(RequestStatus.CONFIRMED))
+                .collect(Collectors.toList());
 
-            requestsToConfirm.forEach(request -> {
-                request.setStatus(RequestStatus.CONFIRMED);
-                confirmedRequests.add(request);
-            });
+        event.setConfirmedRequests(event.getConfirmedRequests() + requestsToConfirm.size());
 
-            event.setConfirmedRequests(event.getConfirmedRequests() + requestsToConfirm.size());
+        return requestsToConfirm;
+    }
 
-            List<ParticipationRequest> requestsToReject = requestsList.stream()
-                    .filter(request -> !requestsToConfirm.contains(request))
-                    .collect(Collectors.toList());
+    private List<ParticipationRequest> rejectRemainingRequests(List<Long> requestIds) {
+        List<ParticipationRequest> requestsList = participationRequestRepository.findAllByIdIn(requestIds);
 
-            requestsToReject.forEach(request -> {
-                request.setStatus(RequestStatus.REJECTED);
-                rejectedRequests.add(request);
-            });
+        List<ParticipationRequest> requestsToReject = requestsList.stream()
+                .filter(request -> !request.getStatus().equals(RequestStatus.CONFIRMED))
+                .peek(request -> request.setStatus(RequestStatus.REJECTED))
+                .collect(Collectors.toList());
 
-        } else if (status == RequestStatus.REJECTED) {
-            List<ParticipationRequest> requestsToReject = requestsList.stream()
-                    .filter(request -> requestIds.contains(request.getId()) && request.getStatus() != RequestStatus.REJECTED)
-                    .collect(Collectors.toList());
+        return requestsToReject;
+    }
 
-            requestsToReject.forEach(request -> {
-                request.setStatus(RequestStatus.REJECTED);
-                rejectedRequests.add(request);
-            });
-        }
+    private List<ParticipationRequest> rejectRequests(List<Long> requestIds) {
+        List<ParticipationRequest> requestsList = participationRequestRepository.findAllByIdIn(requestIds);
 
-        List<ParticipationRequest> savedConfirmedRequests = participationRequestRepository.saveAll(confirmedRequests);
-        List<ParticipationRequest> savedRejectedRequests = participationRequestRepository.saveAll(rejectedRequests);
-        eventRepository.save(event);
+        List<ParticipationRequest> requestsToReject = requestsList.stream()
+                .filter(request -> request.getStatus() != RequestStatus.REJECTED)
+                .peek(request -> request.setStatus(RequestStatus.REJECTED))
+                .collect(Collectors.toList());
 
-        return ParticipationRequestMapper.toEventRequestStatusUpdateResult(savedConfirmedRequests, savedRejectedRequests);
+        return requestsToReject;
     }
 }
