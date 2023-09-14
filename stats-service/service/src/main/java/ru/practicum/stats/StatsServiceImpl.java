@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStatsDto;
+import ru.practicum.exception.DateTimeException;
 import ru.practicum.model.EndpointHit;
 import ru.practicum.model.ViewStats;
 
@@ -22,8 +23,12 @@ public class StatsServiceImpl implements StatsService {
     private final StatsRepository statsRepository;
 
     @Override
-    public List<ViewStatsDto> getStats(LocalDateTime start, LocalDateTime end, List<String> uris, boolean unique) {
+    public List<ViewStatsDto> getStats(LocalDateTime start, LocalDateTime end, List<String> uris, Boolean unique) {
         List<ViewStats> viewStatsList = new ArrayList<>();
+
+        if (end.isBefore(start)) {
+            throw new DateTimeException("Дата и время начала не может быть позже даты и времени конца");
+        }
 
         if (uris != null) {
             if (unique) {
@@ -38,6 +43,7 @@ public class StatsServiceImpl implements StatsService {
                 viewStatsList = statsRepository.getViewStats(start, end);
             }
         }
+
         if (!viewStatsList.isEmpty()) {
             return viewStatsList.stream().map(StatsMapper::toViewStatsDto).collect(Collectors.toList());
         } else {
@@ -49,7 +55,8 @@ public class StatsServiceImpl implements StatsService {
     @Transactional
     public EndpointHitDto add(EndpointHitDto endpointHitDto) {
         EndpointHit endPointHitToSave = StatsMapper.toEndPointHit(endpointHitDto);
+        EndpointHit savedEndPointHit = statsRepository.save(endPointHitToSave);
 
-        return StatsMapper.toEndpointHitDto(statsRepository.save(endPointHitToSave));
+        return StatsMapper.toEndpointHitDto(savedEndPointHit);
     }
 }
