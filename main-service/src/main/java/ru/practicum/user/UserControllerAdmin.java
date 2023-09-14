@@ -2,11 +2,9 @@ package ru.practicum.user;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.exception.IntegrityConstraintViolation;
 import ru.practicum.user.dto.NewUserRequest;
 import ru.practicum.user.dto.UserDto;
 
@@ -38,11 +36,7 @@ public class UserControllerAdmin {
     public UserDto saveNewUser(@RequestBody @Valid NewUserRequest newUserRequest) {
         log.info("получен запрос на добавление пользователя с email: " + newUserRequest.getEmail());
 
-        try {
-            return userAdminService.saveNewUser(newUserRequest);
-        } catch (DataIntegrityViolationException e) {
-            throw new IntegrityConstraintViolation(e.getMessage());
-        }
+        return userAdminService.saveNewUser(newUserRequest);
     }
 
     @DeleteMapping("/{userId}")
@@ -50,11 +44,6 @@ public class UserControllerAdmin {
     public void deleteUser(@PathVariable long userId) {
         log.info("получен запрос на удаление пользователя с id: " + userId);
 
-        try {
-            userAdminService.deleteUser(userId);
-        } catch (
-                DataIntegrityViolationException e) {
-            throw new IntegrityConstraintViolation(e.getMessage());
-        }
+        userAdminService.deleteUser(userId);
     }
 }

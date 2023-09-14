@@ -1,18 +1,13 @@
 package ru.practicum.event.service;
 
-import ru.practicum.enums.State;
 import ru.practicum.event.dto.EventFullDto;
+import ru.practicum.event.dto.EventSearchParams;
 import ru.practicum.event.dto.UpdateEventAdminRequest;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 public interface EventAdminService {
-    List<EventFullDto> getEvents(List<Long> users,
-                                 List<State> states,
-                                 List<Long> categories,
-                                 LocalDateTime rangeStart,
-                                 LocalDateTime rangeEnd, int from, int size);
+    List<EventFullDto> getEvents(EventSearchParams params);
 
     EventFullDto updateEvent(long eventId, UpdateEventAdminRequest updateEventAdminRequest);
 }

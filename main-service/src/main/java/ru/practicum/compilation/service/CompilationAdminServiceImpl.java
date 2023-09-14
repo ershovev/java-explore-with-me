@@ -41,8 +41,7 @@ public class CompilationAdminServiceImpl implements CompilationAdminService {
     @Override
     @Transactional
     public void deleteCompilation(long compId) {
-        compilationRepository.findById(compId)
-                .orElseThrow(() -> new CompilationNotFoundException("подборка событий не найдена"));
+        findCompilationById(compId);
 
         compilationRepository.deleteById(compId);
     }
@@ -50,8 +49,7 @@ public class CompilationAdminServiceImpl implements CompilationAdminService {
     @Override
     @Transactional
     public CompilationDto updateCompilation(long compId, UpdateCompilationRequest updateCompilationRequest) {
-        Compilation compilation = compilationRepository.findById(compId)
-                .orElseThrow(() -> new CompilationNotFoundException("подборка событий не найдена"));
+        Compilation compilation = findCompilationById(compId);
 
         List<Event> events = new ArrayList<>();
         List<Long> eventsIds = updateCompilationRequest.getEvents();
@@ -73,5 +71,10 @@ public class CompilationAdminServiceImpl implements CompilationAdminService {
         }
 
         return CompilationMapper.toCompilationDto(compilationRepository.save(compilation));
+    }
+
+    private Compilation findCompilationById(long compId) {
+        return compilationRepository.findById(compId)
+                .orElseThrow(() -> new CompilationNotFoundException("подборка событий не найдена"));
     }
 }

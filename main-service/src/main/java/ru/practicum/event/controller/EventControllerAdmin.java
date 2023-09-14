@@ -8,6 +8,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.enums.State;
 import ru.practicum.event.dto.EventFullDto;
+import ru.practicum.event.dto.EventSearchParams;
 import ru.practicum.event.dto.UpdateEventAdminRequest;
 import ru.practicum.event.service.EventAdminService;
 
@@ -38,7 +39,16 @@ public class EventControllerAdmin {
                                         @RequestParam(defaultValue = "10") @Positive int size) {
         log.info("получен запрос на получение полной информации о событиях");
 
-        return eventAdminService.getEvents(users, state, categories, rangeStart, rangeEnd, from, size);
+        EventSearchParams params = EventSearchParams.builder()
+                .users(users)
+                .states(state)
+                .categories(categories)
+                .rangeStart(rangeStart)
+                .rangeEnd(rangeEnd)
+                .from(from)
+                .size(size).build();
+
+        return eventAdminService.getEvents(params);
     }
 
     @PatchMapping("/{eventId}")

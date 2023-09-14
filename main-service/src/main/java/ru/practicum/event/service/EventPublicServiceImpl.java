@@ -14,6 +14,7 @@ import ru.practicum.event.Event;
 import ru.practicum.event.EventMapper;
 import ru.practicum.event.EventRepository;
 import ru.practicum.event.dto.EventFullDto;
+import ru.practicum.event.dto.EventSearchParams;
 import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.exception.CategoryDoesntExistException;
 import ru.practicum.exception.EventNotFoundException;
@@ -34,48 +35,40 @@ public class EventPublicServiceImpl implements EventPublicService {
     private final StatisticsService statisticsService;
 
     @Override
-    public List<EventShortDto> getEvents(String text, List<Long> categories, Boolean paid, LocalDateTime rangeStart,
-                                         LocalDateTime rangeEnd, Boolean onlyAvailable, EventSort sort, int from, int size,
-                                         HttpServletRequest request) {
-
+    public List<EventShortDto> getEvents(EventSearchParams params, HttpServletRequest request) {
 
         Pageable pageable;
         List<Event> eventList = new ArrayList<>();
 
-        if (categories != null) {
-            List<Category> categoryList = categoryRepository.findAllByIdIn(categories);
-            if (categoryList.size() != categories.size()) {
+        if (params.getCategories() != null) {
+            List<Category> categoryList = categoryRepository.findAllByIdIn(params.getCategories());
+            if (categoryList.size() != params.getCategories().size()) {
                 throw new CategoryDoesntExistException("Категория/категории не найдены");
             }
         }
 
-        if (rangeStart == null) {
-            rangeStart = LocalDateTime.now();
+        if (params.getRangeStart() == null) {
+            params.setRangeStart(LocalDateTime.now());
         }
 
-        if (rangeEnd == null) {
-            rangeEnd = LocalDateTime.now().plusYears(100);
+        if (params.getRangeEnd() == null) {
+            params.setRangeEnd(LocalDateTime.now().plusYears(100));
         }
 
-        if (sort == EventSort.EVENT_DATE) {
-            pageable = PageRequest.of((from / size), size, Sort.by("eventDate").ascending());
-
-            eventList = eventRepository.findPublishedEventsByParams(text, categories, paid,
-                    rangeStart, rangeEnd, onlyAvailable, pageable);
+        if (params.getSort() == EventSort.EVENT_DATE) {
+            pageable = PageRequest.of((params.getFrom() / params.getSize()), params.getSize(), Sort.by("eventDate").ascending());
+            eventList = eventRepository.findPublishedEventsByParams(params.getText(), params.getCategories(), params.getPaid(),
+                    params.getRangeStart(), params.getRangeEnd(), params.getOnlyAvailable(), pageable);
         } else {
-            List<Long> allEventsIds = eventRepository.findAllPublishedEventsIdsByParams(text, categories, paid,
-                    rangeStart, rangeEnd, onlyAvailable);
-
-            List<Long> filteredEventsIds = statisticsService.getPopularFilteredEvents(allEventsIds, from, size,
-                    LocalDateTime.now().minusYears(100), LocalDateTime.now().plusYears(100));
-
+            List<Long> allEventsIds = eventRepository.findAllPublishedEventsIdsByParams(params.getText(), params.getCategories(),
+                    params.getPaid(), params.getRangeStart(), params.getRangeEnd(), params.getOnlyAvailable());
+            List<Long> filteredEventsIds = statisticsService.getPopularFilteredEvents(allEventsIds, params.getFrom(),
+                    params.getSize(), LocalDateTime.now().minusYears(100), LocalDateTime.now().plusYears(100));
             eventList = eventRepository.findAllByIdIn(filteredEventsIds);
-
             eventList.sort(Comparator.comparing(Event::getViews, Comparator.reverseOrder()));
         }
 
         eventList = statisticsService.findAndSetViewsToEvents(eventList, LocalDateTime.now().minusYears(100), LocalDateTime.now().plusYears(100));
-
         statisticsService.addEndpointHit(request);
 
         return EventMapper.toEventShortDtoList(eventList);
