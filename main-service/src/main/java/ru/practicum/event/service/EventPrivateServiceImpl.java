@@ -71,7 +71,7 @@ public class EventPrivateServiceImpl implements EventPrivateService {
         }
 
         Location location = locationRepository.save(newEventDto.getLocation());
-        Event savedEvent = eventRepository.save(EventMapper.toEvent(newEventDto, user, category, location));
+        Event savedEvent = eventRepository.save(EventMapper.toEvent(newEventDto, user, category, location, State.PENDING));
 
         log.info("Добавлено событие: {}", savedEvent.toString());
 
@@ -195,7 +195,7 @@ public class EventPrivateServiceImpl implements EventPrivateService {
     }
 
     private void validateStateForEventUpdate(State state) {
-        if (state != State.PENDING && state != State.CANCELED) {
+        if (state != State.PENDING && state != State.CANCELED && state != State.REVISION) {
             throw new EventUpdateException("Изменить можно только отмененные события или события в состоянии ожидания модерации ");
         }
     }
@@ -296,7 +296,7 @@ public class EventPrivateServiceImpl implements EventPrivateService {
         return requestsToReject;
     }
 
-    protected List<EventAdminCommentDto> findAdminCommentsToEvent(long eventId) {
+    private List<EventAdminCommentDto> findAdminCommentsToEvent(long eventId) {
         List<EventAdminComment> commentList = eventAdminCommentRepository.findAllByEventId(eventId);
 
         return EventAdminCommentMapper.toEventAdminCommentDtoList(commentList);

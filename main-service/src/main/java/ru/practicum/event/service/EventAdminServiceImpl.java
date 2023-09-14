@@ -13,9 +13,12 @@ import ru.practicum.enums.StateAction;
 import ru.practicum.event.Event;
 import ru.practicum.event.EventMapper;
 import ru.practicum.event.EventRepository;
+import ru.practicum.event.dto.EventFullCommentDto;
 import ru.practicum.event.dto.EventFullDto;
 import ru.practicum.event.dto.EventSearchParams;
 import ru.practicum.event.dto.UpdateEventAdminRequest;
+import ru.practicum.event.eventAdminComment.EventAdminComment;
+import ru.practicum.event.eventAdminComment.EventAdminCommentDto;
 import ru.practicum.event.eventAdminComment.EventAdminCommentMapper;
 import ru.practicum.event.eventAdminComment.EventAdminCommentRepository;
 import ru.practicum.exception.*;
@@ -70,7 +73,7 @@ public class EventAdminServiceImpl implements EventAdminService {
 
     @Override
     @Transactional
-    public EventFullDto updateEvent(long eventId, UpdateEventAdminRequest updateEventAdminRequest) {
+    public EventFullCommentDto updateEvent(long eventId, UpdateEventAdminRequest updateEventAdminRequest) {
         Event event = findEvent(eventId);
         validateStateAction(updateEventAdminRequest.getStateAction());
         updateEventDate(event, updateEventAdminRequest.getEventDate());
@@ -114,7 +117,10 @@ public class EventAdminServiceImpl implements EventAdminService {
         Event updatedEvent = eventRepository.save(event);
         log.info("Обновлено событие: {}", updatedEvent.toString());
 
-        return EventMapper.toEventFullDto(updatedEvent);
+        EventFullCommentDto eventFullCommentDto = EventMapper.toEventFullCommentDto(updatedEvent);
+        eventFullCommentDto.setAdminComments(findAdminCommentsToEvent(eventId));
+
+        return eventFullCommentDto;
     }
 
     private Event findEvent(long eventId) {
@@ -129,8 +135,9 @@ public class EventAdminServiceImpl implements EventAdminService {
 
     private void validateStateAction(StateAction stateAction) {
         if ((stateAction != null) && (stateAction != StateAction.PUBLISH_EVENT
-                && stateAction != StateAction.REJECT_EVENT)) {
-            throw new EventStateActionException("StateAction может принимать значения: PUBLISH_EVENT или REJECT_EVENT");
+                && stateAction != StateAction.REJECT_EVENT && stateAction != StateAction.SEND_TO_REVISION)) {
+            throw new EventStateActionException("StateAction может принимать значения: " + StateAction.PUBLISH_EVENT +
+                    ", " + StateAction.REJECT_EVENT + ", " + StateAction.SEND_TO_REVISION);
         }
     }
 
@@ -161,14 +168,23 @@ public class EventAdminServiceImpl implements EventAdminService {
                     && event.getState().equals(State.PUBLISHED)) {
                 throw new EventStateException("Нельзя отклонить уже опубликованное событие");
             } else if (!event.getState().equals(State.PENDING)
-                    && stateAction.equals(StateAction.PUBLISH_EVENT)) {
-                throw new EventStateException("Чтобы опубликовать событие оно должно быть в статусе PENDING");
+                    && (stateAction.equals(StateAction.PUBLISH_EVENT) || stateAction.equals(StateAction.REJECT_EVENT))) {
+                throw new EventStateException("Чтобы опубликовать или отменить событие оно должно быть в статусе PENDING");
             }
+
             if (stateAction.equals(StateAction.REJECT_EVENT)) {
                 event.setState(State.CANCELED);
             } else if (stateAction.equals(StateAction.PUBLISH_EVENT)) {
                 event.setState(State.PUBLISHED);
+            } else if (stateAction.equals(StateAction.SEND_TO_REVISION)) {
+                event.setState(State.REVISION);
             }
         }
+    }
+
+    private List<EventAdminCommentDto> findAdminCommentsToEvent(long eventId) {
+        List<EventAdminComment> commentList = eventAdminCommentRepository.findAllByEventId(eventId);
+
+        return EventAdminCommentMapper.toEventAdminCommentDtoList(commentList);
     }
 }

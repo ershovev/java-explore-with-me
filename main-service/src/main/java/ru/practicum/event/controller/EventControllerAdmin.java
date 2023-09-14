@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.enums.State;
+import ru.practicum.event.dto.EventFullCommentDto;
 import ru.practicum.event.dto.EventFullDto;
 import ru.practicum.event.dto.EventSearchParams;
 import ru.practicum.event.dto.UpdateEventAdminRequest;
@@ -53,8 +54,8 @@ public class EventControllerAdmin {
 
     @PatchMapping("/{eventId}")
     @ResponseStatus(HttpStatus.OK)
-    public EventFullDto updateEvent(@PathVariable long eventId,
-                                    @RequestBody @Valid UpdateEventAdminRequest updateEventAdminRequest) {
+    public EventFullCommentDto updateEvent(@PathVariable long eventId,
+                                           @RequestBody @Valid UpdateEventAdminRequest updateEventAdminRequest) {
         log.info("получен запрос на изменения статуса события с id = " + eventId);
 
         return eventAdminService.updateEvent(eventId, updateEventAdminRequest);

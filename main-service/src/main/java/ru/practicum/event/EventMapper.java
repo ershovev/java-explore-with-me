@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 import static ru.practicum.MainDateTimeFormatter.mainDateTimeFormatter;
 
 public class EventMapper {
-    public static Event toEvent(NewEventDto newEventDto, User user, Category category, Location location) {
+    public static Event toEvent(NewEventDto newEventDto, User user, Category category, Location location, State state) {
         if (newEventDto.getPaid() == null) {
             newEventDto.setPaid(false);
         }
@@ -46,7 +46,7 @@ public class EventMapper {
                 .views(0)
                 .initiator(user)
                 .createdOn(LocalDateTime.now())
-                .state(State.PENDING)
+                .state(state)
                 .build();
     }
 
