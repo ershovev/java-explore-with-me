@@ -1,3 +1,5 @@
+https://github.com/Ersh0w/java-explore-with-me/pull/6
+
 # java-explore-with-me
 ExploreWithMe project. Приложение-афиша позволяет пользователям делиться информацией об интересных событиях и находить 
 компанию для участия в них.
