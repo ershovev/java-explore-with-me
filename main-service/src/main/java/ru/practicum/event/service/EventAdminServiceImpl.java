@@ -21,7 +21,12 @@ import ru.practicum.event.eventAdminComment.EventAdminComment;
 import ru.practicum.event.eventAdminComment.EventAdminCommentDto;
 import ru.practicum.event.eventAdminComment.EventAdminCommentMapper;
 import ru.practicum.event.eventAdminComment.EventAdminCommentRepository;
-import ru.practicum.exception.*;
+import ru.practicum.exception.CategoryNotFoundException;
+import ru.practicum.exception.EventDateException;
+import ru.practicum.exception.EventNotFoundException;
+import ru.practicum.exception.EventStateActionException;
+import ru.practicum.exception.EventStateException;
+import ru.practicum.exception.UserNotFoundException;
 import ru.practicum.location.Location;
 import ru.practicum.location.LocationRepository;
 import ru.practicum.user.User;
@@ -41,6 +46,9 @@ public class EventAdminServiceImpl implements EventAdminService {
     private final LocationRepository locationRepository;
     private final EventAdminCommentRepository eventAdminCommentRepository;
 
+    private final LocalDateTime defaultStartRange = LocalDateTime.now().minusYears(100);
+    private final LocalDateTime defaultEndRange = LocalDateTime.now().plusYears(100);
+
     @Override
     public List<EventFullDto> getEvents(EventSearchParams params) {
         if (params.getUsers() != null) {
@@ -58,11 +66,11 @@ public class EventAdminServiceImpl implements EventAdminService {
         }
 
         if (params.getRangeStart() == null) {
-            params.setRangeStart(LocalDateTime.now().minusYears(100));
+            params.setRangeStart(defaultStartRange);
         }
 
         if (params.getRangeEnd() == null) {
-            params.setRangeEnd(LocalDateTime.now().plusYears(100));
+            params.setRangeEnd(defaultEndRange);
         }
 
         Pageable pageable = PageRequest.of((params.getFrom() / params.getSize()), params.getSize());
