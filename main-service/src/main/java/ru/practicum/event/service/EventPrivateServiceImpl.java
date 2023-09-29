@@ -14,11 +14,26 @@ import ru.practicum.enums.StateAction;
 import ru.practicum.event.Event;
 import ru.practicum.event.EventMapper;
 import ru.practicum.event.EventRepository;
+import ru.practicum.event.dto.EventFullCommentDto;
 import ru.practicum.event.dto.EventFullDto;
 import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.event.dto.NewEventDto;
 import ru.practicum.event.dto.UpdateEventUserRequest;
-import ru.practicum.exception.*;
+import ru.practicum.event.eventAdminComment.EventAdminComment;
+import ru.practicum.event.eventAdminComment.EventAdminCommentDto;
+import ru.practicum.event.eventAdminComment.EventAdminCommentMapper;
+import ru.practicum.event.eventAdminComment.EventAdminCommentRepository;
+import ru.practicum.exception.CategoryNotFoundException;
+import ru.practicum.exception.EventAccessException;
+import ru.practicum.exception.EventDateException;
+import ru.practicum.exception.EventFullParticipantLimit;
+import ru.practicum.exception.EventModerationException;
+import ru.practicum.exception.EventNotFoundException;
+import ru.practicum.exception.EventStateException;
+import ru.practicum.exception.EventUpdateException;
+import ru.practicum.exception.RequestNotBelongToEventException;
+import ru.practicum.exception.RequestStatusException;
+import ru.practicum.exception.UserNotFoundException;
 import ru.practicum.location.Location;
 import ru.practicum.location.LocationRepository;
 import ru.practicum.participationrequest.ParticipationRequest;
@@ -45,6 +60,7 @@ public class EventPrivateServiceImpl implements EventPrivateService {
     private final CategoryRepository categoryRepository;
     private final LocationRepository locationRepository;
     private final ParticipationRequestRepository participationRequestRepository;
+    private final EventAdminCommentRepository eventAdminCommentRepository;
 
     @Override
     public List<EventShortDto> getEventsOfUser(long userId, int from, int size) {
@@ -69,7 +85,7 @@ public class EventPrivateServiceImpl implements EventPrivateService {
         }
 
         Location location = locationRepository.save(newEventDto.getLocation());
-        Event savedEvent = eventRepository.save(EventMapper.toEvent(newEventDto, user, category, location));
+        Event savedEvent = eventRepository.save(EventMapper.toEvent(newEventDto, user, category, location, State.PENDING));
 
         log.info("Добавлено событие: {}", savedEvent.toString());
 
@@ -77,11 +93,14 @@ public class EventPrivateServiceImpl implements EventPrivateService {
     }
 
     @Override
-    public EventFullDto getFullEventOfUser(long userId, long eventId) {
+    public EventFullCommentDto getFullEventOfUser(long userId, long eventId) {
         findUserById(userId);
         Event event = findEventById(eventId);
 
-        return EventMapper.toEventFullDto(event);
+        EventFullCommentDto eventFullCommentDto = EventMapper.toEventFullCommentDto(event);
+        eventFullCommentDto.setAdminComments(findAdminCommentsToEvent(eventId));
+
+        return eventFullCommentDto;
     }
 
     @Override
@@ -190,7 +209,7 @@ public class EventPrivateServiceImpl implements EventPrivateService {
     }
 
     private void validateStateForEventUpdate(State state) {
-        if (state != State.PENDING && state != State.CANCELED) {
+        if (state != State.PENDING && state != State.CANCELED && state != State.REVISION) {
             throw new EventUpdateException("Изменить можно только отмененные события или события в состоянии ожидания модерации ");
         }
     }
@@ -289,5 +308,11 @@ public class EventPrivateServiceImpl implements EventPrivateService {
                 .collect(Collectors.toList());
 
         return requestsToReject;
+    }
+
+    private List<EventAdminCommentDto> findAdminCommentsToEvent(long eventId) {
+        List<EventAdminComment> commentList = eventAdminCommentRepository.findAllByEventId(eventId);
+
+        return EventAdminCommentMapper.toEventAdminCommentDtoList(commentList);
     }
 }

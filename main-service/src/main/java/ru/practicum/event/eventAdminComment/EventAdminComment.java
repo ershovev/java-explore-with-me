@@ -1,38 +1,42 @@
-package ru.practicum.compilation;
+package ru.practicum.event.eventAdminComment;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import ru.practicum.event.Event;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
-import java.util.List;
+import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "compilations")
+@Table(name = "event_admin_comments")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Compilation {
+public class EventAdminComment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "compilation_events_relation",
-            joinColumns = {@JoinColumn(name = "compilation_id")},
-            inverseJoinColumns = {@JoinColumn(name = "event_id")})
-    private List<Event> events;
-    private Boolean pinned;
-    private String title;
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "created_date")
+    private LocalDateTime created;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_id")
+    @ToString.Exclude
+    private Event event;
 }

@@ -34,6 +34,9 @@ public class EventPublicServiceImpl implements EventPublicService {
     private final CategoryRepository categoryRepository;
     private final StatisticsService statisticsService;
 
+    private final LocalDateTime defaultStartRange = LocalDateTime.now().minusYears(100);
+    private final LocalDateTime defaultEndRange = LocalDateTime.now().plusYears(100);
+
     @Override
     public List<EventShortDto> getEvents(EventSearchParams params, HttpServletRequest request) {
 
@@ -52,7 +55,7 @@ public class EventPublicServiceImpl implements EventPublicService {
         }
 
         if (params.getRangeEnd() == null) {
-            params.setRangeEnd(LocalDateTime.now().plusYears(100));
+            params.setRangeEnd(defaultEndRange);
         }
 
         if (params.getSort() == EventSort.EVENT_DATE) {
@@ -63,12 +66,12 @@ public class EventPublicServiceImpl implements EventPublicService {
             List<Long> allEventsIds = eventRepository.findAllPublishedEventsIdsByParams(params.getText(), params.getCategories(),
                     params.getPaid(), params.getRangeStart(), params.getRangeEnd(), params.getOnlyAvailable());
             List<Long> filteredEventsIds = statisticsService.getPopularFilteredEvents(allEventsIds, params.getFrom(),
-                    params.getSize(), LocalDateTime.now().minusYears(100), LocalDateTime.now().plusYears(100));
+                    params.getSize(), defaultStartRange, defaultEndRange);
             eventList = eventRepository.findAllByIdIn(filteredEventsIds);
             eventList.sort(Comparator.comparing(Event::getViews, Comparator.reverseOrder()));
         }
 
-        eventList = statisticsService.findAndSetViewsToEvents(eventList, LocalDateTime.now().minusYears(100), LocalDateTime.now().plusYears(100));
+        eventList = statisticsService.findAndSetViewsToEvents(eventList, defaultStartRange, defaultEndRange);
         statisticsService.addEndpointHit(request);
 
         return EventMapper.toEventShortDtoList(eventList);
@@ -84,7 +87,7 @@ public class EventPublicServiceImpl implements EventPublicService {
         }
 
         List<Event> eventList = new ArrayList<>();
-        eventList = statisticsService.findAndSetViewsToEvents(List.of(event), LocalDateTime.now().minusYears(100), LocalDateTime.now().plusYears(100));
+        eventList = statisticsService.findAndSetViewsToEvents(List.of(event), defaultStartRange, defaultEndRange);
         statisticsService.addEndpointHit(request);
 
         return EventMapper.toEventFullDto(eventList.get(0));
